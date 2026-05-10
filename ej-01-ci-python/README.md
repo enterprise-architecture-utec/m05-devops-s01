@@ -104,13 +104,7 @@ ci.yml
 
 > 💡 **Matrix Strategy:** GitHub lanza 3 jobs en paralelo, uno por versión de Python. Si tu código funciona en 3.10 pero falla en 3.12, el matrix te lo detecta.
 
-### Paso 4 — Hacer commit del código inicial a main
-
-```bash
-git add .
-git commit -m "feat: agregar calculadora y pipeline CI"
-git push origin main
-```
+### Paso 4 — Guarda todos los cambios en tu repositorio
 
 Ve a la pestaña **Actions** de tu repositorio en GitHub. Verás el workflow ejecutándose. Espera a que termine — debería mostrar ✅ en ambos jobs.
 
