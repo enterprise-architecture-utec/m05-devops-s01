@@ -45,12 +45,6 @@ Developer
 
 Ve a https://github.com/new y crea un repositorio **público** llamado `m05-ci-python`. Inicialízalo con un README.
 
-```bash
-# Clonar en tu máquina local
-git clone https://github.com/TU_USUARIO/m05-ci-python.git
-cd m05-ci-python
-```
-
 ### Paso 2 — Agregar el código fuente
 
 Copia los archivos de este ejercicio a tu repositorio:
