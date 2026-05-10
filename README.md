@@ -18,33 +18,33 @@ Tres ejercicios progresivos que cubren el ecosistema GitHub completo: desde un p
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │  EJ-01 · 25 min · CI con Python + GitHub Flow                   │
-│                                                                  │
+│                                                                 │
 │  feature/suma ──► main                                          │
-│       │                                                          │
+│       │                                                         │
 │       └──► Workflow CI (push + PR)                              │
 │               ├── lint (flake8)                                 │
-│               ├── test matrix (Python 3.10, 3.11, 3.12)        │
+│               ├── test matrix (Python 3.10, 3.11, 3.12)         │
 │               └── coverage report                               │
 ├─────────────────────────────────────────────────────────────────┤
-│  EJ-02 · 25 min · Codespaces + Node.js + Environments          │
-│                                                                  │
+│  EJ-02 · 25 min · Codespaces + Node.js + Environments           │
+│                                                                 │
 │  Codespace (devcontainer) ──► editar código                     │
-│       │                                                          │
+│       │                                                         │
 │       └──► Workflow con secrets + environments                  │
 │               ├── install + test (Jest)                         │
 │               ├── build artifact                                │
-│               └── deploy a environment "staging"               │
+│               └── deploy a environment "staging"                │
 ├─────────────────────────────────────────────────────────────────┤
 │  EJ-03 · 25 min · Custom Composite Action                       │
-│                                                                  │
+│                                                                 │
 │  .github/actions/notify-and-tag/                                │
 │       action.yml  ←── Custom Composite Action                   │
 │           ├── input: version, environment, slack_webhook        │
 │           ├── step: crear git tag                               │
 │           ├── step: generar release notes                       │
 │           └── step: notificar (simulated)                       │
-│                                                                  │
-│  .github/workflows/release.yml  ←── consume la Action          │
+│                                                                 │
+│  .github/workflows/release.yml  ←── consume la Action           │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
