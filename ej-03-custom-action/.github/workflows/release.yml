@@ -1,0 +1,117 @@
+# .github/workflows/release.yml
+#
+# Workflow de Release que consume la Custom Action notify-and-tag.
+#
+# Se dispara:
+#   - Manualmente (workflow_dispatch) con input de versión
+#   - En push de tags con formato v*.*.*
+#
+# Demuestra:
+#   - Invocar una Custom Composite Action local (uses: ./path)
+#   - Capturar y usar los outputs de la Action
+#   - workflow_dispatch con inputs tipados
+
+name: "Release — notify-and-tag"
+
+on:
+  # Trigger manual con parámetros desde la UI de GitHub
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Versión semántica a lanzar (ej: 1.2.3)"
+        required: true
+        type: string
+      environment:
+        description: "Entorno destino"
+        required: false
+        default: "production"
+        type: choice
+        options:
+          - staging
+          - production
+          - uat
+      create_tag:
+        description: "¿Crear el git tag?"
+        required: false
+        default: true
+        type: boolean
+
+  # También se puede disparar con un push de tag
+  push:
+    tags:
+      - "v*.*.*"
+
+# Permisos mínimos para que la Action pueda crear tags
+permissions:
+  contents: write     # ← necesario para git push de tags
+
+jobs:
+
+  # ──────────────────────────────────────────────────────────────
+  # JOB: release
+  # Consume la Custom Action notify-and-tag.
+  # ──────────────────────────────────────────────────────────────
+  release:
+    name: "Release v${{ github.event.inputs.version || github.ref_name }}"
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout del repositorio
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0     # ← necesario para que git log funcione en la Action
+
+      # ── Invocar la Custom Composite Action ──────────────────────
+      # "uses: ./" indica que la Action está en el mismo repositorio
+      - name: Ejecutar notify-and-tag
+        id: release_action          # ← id para referenciar outputs después
+        uses: ./.github/actions/notify-and-tag
+        with:
+          version: ${{ github.event.inputs.version || github.ref_name }}
+          environment: ${{ github.event.inputs.environment || 'production' }}
+          webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
+          create_tag: ${{ github.event.inputs.create_tag || 'false' }}
+
+      # ── Usar los outputs de la Action ───────────────────────────
+      - name: Mostrar resultados del release
+        run: |
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "  Resultados de la Custom Action"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "  Tag creado       : ${{ steps.release_action.outputs.tag_name }}"
+          echo "  Release notes    : ${{ steps.release_action.outputs.release_notes }}"
+          echo "  Notif. enviada   : ${{ steps.release_action.outputs.notification_sent }}"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+  # ──────────────────────────────────────────────────────────────
+  # JOB: hotfix-release
+  # Demuestra que la MISMA Action puede ser consumida por
+  # múltiples jobs/workflows — principio DRY en CI/CD.
+  # ──────────────────────────────────────────────────────────────
+  hotfix-release:
+    name: "Ejemplo: hotfix con la misma Action"
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch'   # ← solo en dispatch manual
+
+    steps:
+      - name: Checkout del repositorio
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # ── La MISMA Action, distintos parámetros ──────────────────
+      - name: Simular hotfix release
+        id: hotfix_action
+        uses: ./.github/actions/notify-and-tag
+        with:
+          version: "${{ github.event.inputs.version }}-hotfix"
+          environment: staging
+          webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
+          create_tag: false           # ← en este job NO creamos el tag
+
+      - name: Confirmar reutilización
+        run: |
+          echo "✅ La misma Action fue usada por dos jobs distintos."
+          echo "   Si necesitas cambiar el proceso de release, editas"
+          echo "   UNA sola vez: .github/actions/notify-and-tag/action.yml"
+          echo "   y ambos jobs se actualizan automáticamente."

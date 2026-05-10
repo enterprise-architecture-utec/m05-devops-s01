@@ -1,0 +1,252 @@
+# .github/actions/notify-and-tag/action.yml
+#
+# Custom Composite Action: notify-and-tag
+#
+# Encapsula el flujo estándar de release en la organización:
+#   1. Validar el número de versión
+#   2. Crear un git tag semántico
+#   3. Generar release notes desde el historial de git
+#   4. Enviar notificación por webhook
+#
+# Uso desde un workflow:
+#
+#   - name: Release
+#     uses: ./.github/actions/notify-and-tag
+#     with:
+#       version: "1.2.3"
+#       environment: production
+#       webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+name: "Notify and Tag"
+description: >
+  Crea un git tag semántico, genera release notes desde el historial
+  de commits y envía una notificación por webhook. Action reutilizable
+  para estandarizar el proceso de release en la organización.
+
+# ──────────────────────────────────────────────────────────────────
+# INPUTS — lo que el workflow caller debe (o puede) proveer
+# ──────────────────────────────────────────────────────────────────
+inputs:
+  version:
+    description: >
+      Número de versión semántica SIN el prefijo v. Ejemplo: "1.2.3".
+      Debe seguir el formato MAJOR.MINOR.PATCH.
+    required: true
+
+  environment:
+    description: >
+      Nombre del entorno destino del release. Se usa en la notificación
+      y en los release notes. Ejemplos: staging, production, uat.
+    required: false
+    default: "staging"
+
+  webhook_url:
+    description: >
+      URL del webhook para enviar la notificación de release.
+      Pasar como secret: ${{ secrets.SLACK_WEBHOOK_URL }}.
+      Si está vacío, la notificación se omite sin fallar.
+    required: false
+    default: ""
+
+  create_tag:
+    description: >
+      Si es "true", crea el git tag en el repositorio.
+      Útil para desactivar en dry-runs o entornos de prueba.
+    required: false
+    default: "true"
+
+# ──────────────────────────────────────────────────────────────────
+# OUTPUTS — valores que el workflow caller puede leer después
+# ──────────────────────────────────────────────────────────────────
+outputs:
+  tag_name:
+    description: "Nombre del tag git creado. Ejemplo: v1.2.3"
+    value: ${{ steps.create_tag.outputs.tag }}
+
+  release_notes:
+    description: "Ruta al archivo Markdown de release notes generado."
+    value: ${{ steps.generate_notes.outputs.notes_file }}
+
+  notification_sent:
+    description: "true si la notificación fue enviada, false si se omitió."
+    value: ${{ steps.notify.outputs.sent }}
+
+# ──────────────────────────────────────────────────────────────────
+# RUNS — los steps que componen la Action
+# ──────────────────────────────────────────────────────────────────
+runs:
+  using: composite   # ← tipo Composite: combina steps shell
+
+  steps:
+
+    # ── Step 1: Validar el formato de versión ─────────────────────
+    - name: Validar inputs
+      shell: bash
+      run: |
+        VERSION="${{ inputs.version }}"
+        ENV="${{ inputs.environment }}"
+
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        echo "  notify-and-tag v1.0"
+        echo "  Versión   : $VERSION"
+        echo "  Entorno   : $ENV"
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+        # Validar formato semántico: MAJOR.MINOR.PATCH
+        if ! echo "$VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+          echo "❌ Error: La versión '$VERSION' no tiene formato semántico (ej: 1.2.3)"
+          exit 1
+        fi
+
+        echo "✅ Versión válida: $VERSION"
+        echo "✅ Entorno: $ENV"
+
+    # ── Step 2: Crear el git tag ──────────────────────────────────
+    - name: Crear git tag
+      id: create_tag
+      shell: bash
+      run: |
+        VERSION="${{ inputs.version }}"
+        TAG_NAME="v${VERSION}"
+
+        if [ "${{ inputs.create_tag }}" == "true" ]; then
+          # Configurar identidad de git (requerido para crear tags)
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Verificar si el tag ya existe
+          if git rev-parse "$TAG_NAME" >/dev/null 2>&1; then
+            echo "⚠️  El tag $TAG_NAME ya existe — omitiendo creación"
+          else
+            git tag -a "$TAG_NAME" -m "Release $TAG_NAME — ${{ inputs.environment }}"
+            git push origin "$TAG_NAME"
+            echo "✅ Tag $TAG_NAME creado y publicado"
+          fi
+        else
+          echo "ℹ️  create_tag=false — omitiendo creación del tag"
+        fi
+
+        # Pasar el tag como output de este step
+        # $GITHUB_OUTPUT es la forma moderna (reemplaza set-output)
+        echo "tag=${TAG_NAME}" >> "$GITHUB_OUTPUT"
+
+    # ── Step 3: Generar release notes ─────────────────────────────
+    - name: Generar release notes
+      id: generate_notes
+      shell: bash
+      run: |
+        VERSION="${{ inputs.version }}"
+        TAG_NAME="v${VERSION}"
+        NOTES_FILE="release-notes-${TAG_NAME}.md"
+        DATE=$(date -u +"%Y-%m-%d")
+
+        echo "📝 Generando release notes..."
+
+        # Obtener el tag anterior para el rango de commits
+        PREV_TAG=$(git describe --tags --abbrev=0 HEAD~1 2>/dev/null || echo "")
+
+        {
+          echo "# Release ${TAG_NAME}"
+          echo ""
+          echo "**Fecha:** ${DATE}"
+          echo "**Entorno:** ${{ inputs.environment }}"
+          echo "**Commit:** \`${{ github.sha }}\`"
+          echo "**Autor:** ${{ github.actor }}"
+          echo ""
+          echo "## 📋 Cambios incluidos"
+          echo ""
+
+          if [ -n "$PREV_TAG" ]; then
+            echo "Commits desde \`${PREV_TAG}\` hasta \`${TAG_NAME}\`:"
+            echo ""
+            # Listar commits en el rango, en formato legible
+            git log "${PREV_TAG}..HEAD" \
+              --pretty=format:"- %s (%h)" \
+              --no-merges \
+              2>/dev/null || echo "- (no se pudo obtener el historial)"
+          else
+            echo "Primer release — historial completo:"
+            echo ""
+            git log HEAD \
+              --pretty=format:"- %s (%h)" \
+              --no-merges \
+              --max-count=10 \
+              2>/dev/null || echo "- (no se pudo obtener el historial)"
+          fi
+
+          echo ""
+          echo ""
+          echo "---"
+          echo "_Generado automáticamente por [notify-and-tag](.github/actions/notify-and-tag/action.yml)_"
+        } > "$NOTES_FILE"
+
+        echo "✅ Release notes generadas: $NOTES_FILE"
+        cat "$NOTES_FILE"
+
+        echo "notes_file=${NOTES_FILE}" >> "$GITHUB_OUTPUT"
+
+    # ── Step 4: Subir release notes como artifact ─────────────────
+    - name: Subir release notes
+      uses: actions/upload-artifact@v4
+      with:
+        name: release-notes-v${{ inputs.version }}
+        path: release-notes-v${{ inputs.version }}.md
+        retention-days: 30
+
+    # ── Step 5: Enviar notificación ───────────────────────────────
+    - name: Enviar notificación
+      id: notify
+      shell: bash
+      env:
+        WEBHOOK_URL: ${{ inputs.webhook_url }}
+      run: |
+        VERSION="${{ inputs.version }}"
+        ENV="${{ inputs.environment }}"
+        TAG="v${VERSION}"
+
+        PAYLOAD="{
+          \"text\": \"🚀 *Release ${TAG}* desplegado en *${ENV}*\",
+          \"attachments\": [{
+            \"color\": \"good\",
+            \"fields\": [
+              {\"title\": \"Versión\", \"value\": \"${TAG}\", \"short\": true},
+              {\"title\": \"Entorno\", \"value\": \"${ENV}\", \"short\": true},
+              {\"title\": \"Actor\",   \"value\": \"${{ github.actor }}\", \"short\": true},
+              {\"title\": \"Commit\",  \"value\": \"${{ github.sha }}\", \"short\": true}
+            ]
+          }]
+        }"
+
+        if [ -n "$WEBHOOK_URL" ]; then
+          echo "📢 Enviando notificación a webhook..."
+          # En un entorno real, esto haría el curl:
+          # curl -s -X POST "$WEBHOOK_URL" \
+          #   -H "Content-Type: application/json" \
+          #   -d "$PAYLOAD"
+          echo "✅ Notificación enviada (simulado en lab)"
+          echo "sent=true" >> "$GITHUB_OUTPUT"
+        else
+          echo "ℹ️  webhook_url no configurado — notificación omitida"
+          echo "sent=false" >> "$GITHUB_OUTPUT"
+        fi
+
+    # ── Step 6: Escribir resumen visual en la UI de GitHub ─────────
+    - name: Escribir resumen del release
+      shell: bash
+      run: |
+        VERSION="${{ inputs.version }}"
+        ENV="${{ inputs.environment }}"
+
+        {
+          echo "## 🚀 Release v${VERSION} completado"
+          echo ""
+          echo "| Campo | Valor |"
+          echo "|-------|-------|"
+          echo "| 🏷️ Tag | \`v${VERSION}\` |"
+          echo "| 🌐 Entorno | ${ENV} |"
+          echo "| 👤 Actor | ${{ github.actor }} |"
+          echo "| 📦 Commit | \`${{ github.sha }}\` |"
+          echo "| 📢 Notificación | ${{ steps.notify.outputs.sent }} |"
+          echo ""
+          echo "> Release notes disponibles en los **Artifacts** de este run."
+        } >> "$GITHUB_STEP_SUMMARY"

@@ -1,0 +1,21 @@
+{
+  "name": "m05-codespaces-node",
+  "version": "1.0.0",
+  "description": "Lab EJ-02 — GitHub Codespaces + Node.js + Actions",
+  "main": "src/api.js",
+  "scripts": {
+    "test": "jest",
+    "test:coverage": "jest --coverage",
+    "test:watch": "jest --watch",
+    "lint": "eslint src/ tests/"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "eslint": "^9.0.0"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "collectCoverageFrom": ["src/**/*.js"],
+    "coverageReporters": ["text", "lcov", "clover"]
+  }
+}

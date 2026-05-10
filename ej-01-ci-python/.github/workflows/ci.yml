@@ -1,0 +1,101 @@
+# .github/workflows/ci.yml
+#
+# Pipeline CI para proyecto Python.
+# Se dispara en:
+#   - push a main y ramas feature/**
+#   - pull_request hacia main
+#
+# Jobs:
+#   1. lint  — verifica estilo con flake8 (corre primero)
+#   2. test  — ejecuta pytest en matrix Python 3.10, 3.11, 3.12
+
+name: CI — Python
+
+on:
+  push:
+    branches:
+      - main
+      - "feature/**"     # ← cualquier rama que empiece con feature/
+  pull_request:
+    branches:
+      - main
+
+# Cancelar runs anteriores del mismo PR para ahorrar minutos
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+
+  # ──────────────────────────────────────────────────────────────
+  # JOB 1: lint
+  # Verifica que el código cumpla el estilo PEP8 con flake8.
+  # Si este job falla, el job test NO se ejecuta (needs: lint).
+  # ──────────────────────────────────────────────────────────────
+  lint:
+    name: Lint (flake8)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout del código
+        uses: actions/checkout@v4
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"             # ← cachea dependencias para acelerar runs
+
+      - name: Instalar flake8
+        run: pip install flake8
+
+      - name: Ejecutar flake8
+        run: |
+          flake8 src/ tests/ \
+            --max-line-length=100 \
+            --exclude=__pycache__
+          echo "✅ Sin errores de estilo"
+
+  # ──────────────────────────────────────────────────────────────
+  # JOB 2: test
+  # Ejecuta pytest en 3 versiones de Python en paralelo.
+  # Solo corre si lint pasó (needs: lint).
+  # ──────────────────────────────────────────────────────────────
+  test:
+    name: Test (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    needs: lint          # ← dependencia: espera a que lint pase
+
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+      fail-fast: false   # ← continuar con las otras versiones aunque una falle
+
+    steps:
+      - name: Checkout del código
+        uses: actions/checkout@v4
+
+      - name: Configurar Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: "pip"
+
+      - name: Instalar dependencias
+        run: pip install -r requirements.txt
+
+      - name: Ejecutar tests con coverage
+        run: |
+          pytest tests/ \
+            --verbose \
+            --cov=src \
+            --cov-report=term-missing \
+            --cov-report=xml:coverage.xml
+
+      - name: Subir reporte de cobertura como artifact
+        uses: actions/upload-artifact@v4
+        if: always()      # ← subir aunque los tests fallen
+        with:
+          name: coverage-python-${{ matrix.python-version }}
+          path: coverage.xml
+          retention-days: 7
