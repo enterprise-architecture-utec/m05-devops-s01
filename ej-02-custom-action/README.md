@@ -1,4 +1,4 @@
-# 🔧 EJ-03 — Custom Composite Action: `notify-and-tag`
+# 🔧 EJ-02 — Custom Composite Action: `notify-and-tag`
 
 **Tiempo estimado:** 25 minutos  
 **Nivel:** Avanzado  
