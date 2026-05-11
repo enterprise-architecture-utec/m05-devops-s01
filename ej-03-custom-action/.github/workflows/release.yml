@@ -35,6 +35,11 @@ on:
         required: false
         default: true
         type: boolean
+      is_hotfix:
+        description: "¿Es un hotfix? Ejecuta el job de hotfix en lugar del release normal."
+        required: false
+        default: false
+        type: boolean
 
   # También se puede disparar con un push de tag
   push:
@@ -54,6 +59,7 @@ jobs:
   release:
     name: "Release v${{ github.event.inputs.version || github.ref_name }}"
     runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event.inputs.is_hotfix == 'false'
 
     steps:
       - name: Checkout del repositorio
@@ -89,9 +95,9 @@ jobs:
   # múltiples jobs/workflows — principio DRY en CI/CD.
   # ──────────────────────────────────────────────────────────────
   hotfix-release:
-    name: "Ejemplo: hotfix con la misma Action"
+    name: "Hotfix v${{ github.event.inputs.version }}"
     runs-on: ubuntu-latest
-    if: github.event_name == 'workflow_dispatch'   # ← solo en dispatch manual
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.is_hotfix == 'true'
 
     steps:
       - name: Checkout del repositorio
@@ -104,10 +110,10 @@ jobs:
         id: hotfix_action
         uses: ./.github/actions/notify-and-tag
         with:
-          version: "${{ github.event.inputs.version }}-hotfix"
+          version: "${{ github.event.inputs.version }}"
           environment: staging
           webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
-          create_tag: false           # ← en este job NO creamos el tag
+          create_tag: ${{ github.event.inputs.create_tag }}
 
       - name: Confirmar reutilización
         run: |
