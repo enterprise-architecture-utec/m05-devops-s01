@@ -134,10 +134,10 @@ def potencia(base, exponente):
 Y agrega el test en `tests/test_calculadora.py`:
 
 ```python
-def test_potencia_positiva():
+def test_potencia_positiva(self):
     assert potencia(2, 3) == 8
 
-def test_potencia_cero():
+def test_potencia_cero(self):
     assert potencia(5, 0) == 1
 ```
 
