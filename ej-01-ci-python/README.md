@@ -56,8 +56,10 @@ m05-ci-python/
 │       └── ci.yml
 ├── src/
 │   └── calculadora.py
+│   └── __init__.py
 ├── tests/
 │   └── test_calculadora.py
+│   └── __init__.py
 └── requirements.txt
 ```
 
