@@ -233,4 +233,4 @@ Después del merge, ve a Actions. Verás un nuevo run disparado por el `push` a 
 
 ## ➡️ Siguiente ejercicio
 
-[`../ej-02-codespaces-node/README.md`](../ej-03-custom-action/README.md)
+[`../ej-02-custom-action/README.md`](../ej-02-custom-action/README.md)
