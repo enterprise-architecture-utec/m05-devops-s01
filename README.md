@@ -25,7 +25,7 @@ Tres ejercicios progresivos que cubren el ecosistema GitHub completo: desde un p
 │               ├── lint (flake8)                                 │
 │               ├── test matrix (Python 3.10, 3.11, 3.12)         │
 │               └── coverage report                               │
-
+│                                                                 │
 ├─────────────────────────────────────────────────────────────────┤
 │  EJ-02 · 25 min · Custom Composite Action                       │
 │                                                                 │
@@ -58,7 +58,7 @@ m05-github-actions-lab/
 │   └── tests/
 │       └── test_calculadora.py
 │
-└── ej-02-custom-action/               ← Ejercicio 3: Custom Action
+└── ej-02-custom-action/               ← Ejercicio 2: Custom Action
     ├── README.md
     ├── .github/
     │   ├── actions/
@@ -79,7 +79,7 @@ m05-github-actions-lab/
 |-------------|--------------|
 | Cuenta GitHub (free) | Todos los ejercicios |
 | Repositorio público propio | Todos los ejercicios |
-| Git instalado localmente | EJ-01, EJ-03 |
+| Git instalado localmente | EJ-01, EJ-02 |
 | Python 3.10+ | EJ-01 (opcional local) |
 
 ---
