@@ -3,7 +3,7 @@
 **Curso:** Arquitectura de Soluciones Multinube  
 **Módulo 5, Sesión 1:** Ecosistema GitHub y Workflows Modernos  
 **Docente:** Aldo Trucios — UTEC Posgrado  
-**Duración total:** ~75 minutos
+**Duración total:** ~50 minutos
 
 ---
 
@@ -25,17 +25,9 @@ Tres ejercicios progresivos que cubren el ecosistema GitHub completo: desde un p
 │               ├── lint (flake8)                                 │
 │               ├── test matrix (Python 3.10, 3.11, 3.12)         │
 │               └── coverage report                               │
+
 ├─────────────────────────────────────────────────────────────────┤
-│  EJ-02 · 25 min · Codespaces + Node.js + Environments           │
-│                                                                 │
-│  Codespace (devcontainer) ──► editar código                     │
-│       │                                                         │
-│       └──► Workflow con secrets + environments                  │
-│               ├── install + test (Jest)                         │
-│               ├── build artifact                                │
-│               └── deploy a environment "staging"                │
-├─────────────────────────────────────────────────────────────────┤
-│  EJ-03 · 25 min · Custom Composite Action                       │
+│  EJ-02 · 25 min · Custom Composite Action                       │
 │                                                                 │
 │  .github/actions/notify-and-tag/                                │
 │       action.yml  ←── Custom Composite Action                   │
@@ -66,18 +58,7 @@ m05-github-actions-lab/
 │   └── tests/
 │       └── test_calculadora.py
 │
-├── ej-02-codespaces-node/             ← Ejercicio 2: Codespaces + Node
-│   ├── README.md
-│   ├── .github/workflows/
-│   │   └── ci-node.yml
-│   ├── .devcontainer/
-│   │   └── devcontainer.json
-│   ├── src/
-│   │   └── api.js
-│   └── tests/
-│       └── api.test.js
-│
-└── ej-03-custom-action/               ← Ejercicio 3: Custom Action
+└── ej-02-custom-action/               ← Ejercicio 3: Custom Action
     ├── README.md
     ├── .github/
     │   ├── actions/
@@ -100,7 +81,6 @@ m05-github-actions-lab/
 | Repositorio público propio | Todos los ejercicios |
 | Git instalado localmente | EJ-01, EJ-03 |
 | Python 3.10+ | EJ-01 (opcional local) |
-| Node.js 20+ | EJ-02 (opcional local, Codespaces lo provee) |
 
 ---
 
